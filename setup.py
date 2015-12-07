@@ -24,7 +24,7 @@ setup(
     include_package_data=True,
     install_requires=[
         'xlrd>=0.9.4',
-        'enum34',
+        'enum34>=1.1.1',
         'SQLAlchemy>=1.0.9',
         'invoke>=0.11.1',
         'psycopg2>=2.6.1',
