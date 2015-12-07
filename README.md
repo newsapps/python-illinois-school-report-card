@@ -15,7 +15,10 @@ For data loading:
 Installation
 ------------
 
-TODO: Write this
+    mkvirtualenv python-illinois-school-report-card
+    git clone git@tribune.unfuddle.com:tribune/python-illinois-school-report-card.git
+    cd python-illinois-school-report-card
+    pip install -e .
 
 Data loading
 ------------
