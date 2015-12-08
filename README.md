@@ -28,10 +28,15 @@ Installation
     cd python-illinois-school-report-card
     pip install -e .
 
+Getting the data
+----------------
+
+The data is available from an SFTP server:
+
+sftp://RC15:R3port;15@206.166.105.117
+
 Data loading
 ------------
-
-Download data somewhere.
 
 Create a database:
 
