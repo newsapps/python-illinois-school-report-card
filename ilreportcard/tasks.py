@@ -9,6 +9,8 @@ from invoke import task
 
 from sqlalchemy import (create_engine, MetaData)
 
+from illinois_educational_entities.utils import clean_school_name
+
 from ilreportcard.schema import get_assessment_schema
 from ilreportcard.load import get_assessment_loader
 from ilreportcard.query import summary_query 
@@ -121,6 +123,7 @@ def generate_print_tables(year, papermap, papercol, rcdtscol,
             for row in results:
                 rcdts_id = row['school_id']
                 district_id = rcdts_id[:-4] + "0000"
+                row['school_name'] = clean_school_name(row['school_name'])
                 results_by_rcdts[rcdts_id] = row
                 results_by_rcdts[district_id] = _district_result(row)
 

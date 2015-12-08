@@ -323,7 +323,7 @@ class AssessmentSchema2015(object):
         modifier = modifier.replace('TWO', '2')
 
         # This particular case, e.g.
-        # "# of LEP students who have attended schools in the U.S. for less than 12 months and are not assessed on the State's ELA test (SCHOOL)"
+        # "# of LEP students who have attended schools in the U.S. for less than 12 months and are not assessed on the State's ELA test (SCHOOL)"
         # makes super long column names. 
         pattern = (r'# of.*\(([A-Z]+)\)')
         m = re.match(pattern, description)
