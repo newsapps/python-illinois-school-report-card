@@ -56,5 +56,5 @@ Data export
 
 ### Generate CSVs for print tables
 
-invoke --root ./ilreportcard/ generate_print_tables --year=2015 --papermap=/Users/ghing/Downloads/PARCC\ -\ schools_districts.csv --papercol=Paper --rcdtscol=RCDTS  --outputdir=./_out/
+    invoke --root ./ilreportcard/ generate_print_tables --year=2015 --papermap=/Users/ghing/Downloads/PARCC\ -\ schools_districts.csv --papercol=Paper --rcdtscol=RCDTS  --outputdir=./_out/
 

@@ -1,6 +1,11 @@
 from sqlalchemy.sql import text
 
 def summary_query(conn, year, school_ids=None):
+    f = globals()['summary_query_{}'.format(year)]
+    return f(conn, school_ids)
+
+
+def summary_query_2015(conn, school_ids=None):
     """
     Query for print agate
 
@@ -38,8 +43,11 @@ def summary_query(conn, year, school_ids=None):
     FROM assessment_2015_schools s 
     JOIN assessment_2015_overall_achievement_parcc_dlm_performance a ON a.school_id = s.school_id
     JOIN assessment_2015_participation p ON p.school_id = s.school_id
-    WHERE s.school_id = ANY(:school_ids)
     """
+
+    if school_ids is not None:
+        query += "WHERE s.school_id = ANY(:school_ids)"
+
     s = text(query)
     results = []
     for row in conn.execute(s, school_ids=school_ids):
