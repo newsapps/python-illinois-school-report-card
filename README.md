@@ -49,3 +49,12 @@ TODO: Describe how to modify the class to handle different parts.
 Add a new loader class to `ilreports.load` and update `ilreports.load.get_assessment_loader` to return that class.
 
 TODO: Describe things to look out for in the new class, but most of the differences should appear in the schema class.
+
+
+Data export
+-----------
+
+### Generate CSVs for print tables
+
+invoke --root ./ilreportcard/ generate_print_tables --year=2015 --papermap=/Users/ghing/Downloads/PARCC\ -\ schools_districts.csv --papercol=Paper --rcdtscol=RCDTS  --outputdir=./_out/
+

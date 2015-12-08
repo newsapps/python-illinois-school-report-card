@@ -1,4 +1,7 @@
+import csv
 import logging
+import os
+import sys
 
 from invoke import task
 
@@ -6,11 +9,14 @@ from sqlalchemy import (create_engine, MetaData)
 
 from ilreportcard.schema import get_assessment_schema
 from ilreportcard.load import get_assessment_loader
+from ilreportcard.query import summary_query 
 
 logging.basicConfig(level=logging.INFO)
 
+DEFAULT_DATABASE = "postgresql://localhost:5432/school_report_card"
+
 @task
-def create_assessment_schema(year, layout, database="postgresql://localhost:5432/school_report_card"):
+def create_assessment_schema(year, layout, database="DEFAULT_DATABASE"):
     with open(layout, 'rb') as f:
         schema = get_assessment_schema(int(year))
         schema.from_file(f)
@@ -26,7 +32,7 @@ def create_assessment_schema(year, layout, database="postgresql://localhost:5432
 
 @task
 def load_assessment_data(year, layout, data,
-        database="postgresql://localhost:5432/school_report_card"):
+        database="DEFAULT_DATABASE"):
     with open(layout, 'rb') as f:
         schema = get_assessment_schema(int(year))
         schema.from_file(f)
@@ -39,4 +45,85 @@ def load_assessment_data(year, layout, data,
             loader.set_schema(schema)
             loader.load(f, metadata, connection)
 
-        
+def _district_result(result):
+    """Remove school fields from a result row, leaving only the district ones"""
+    out = result.copy()
+    for k in result.keys():
+        if 'school' in k:
+            del out[k]
+
+    return out
+
+
+@task
+def generate_print_tables(year, papermap, papercol, rcdtscol,
+        outputdir=os.getcwd(), outputfilename='print_tables.csv', database=DEFAULT_DATABASE):
+    filename_prefix = outputfilename.split('.')[0]
+    filename_suffix = '.'.join(outputfilename.split('.')[1:])
+
+    fieldnames = [
+      'school_name',
+      'district_name',
+      #'grades_in_school',
+      'school_pct_proficiency_in_ela_parcc_2015_ela',
+      'total_school_enrollment_in_ela_grade_3_8_hs_all',
+      'pct_not_taking_ela_tests_school_all',
+      'school_pct_proficiency_in_math_parcc_2015_math',
+      'total_school_enrollment_in_math_grade_3_8_hs_all',
+      'pct_not_taking_math_tests_school_all',
+      'district_pct_proficiency_in_ela_parcc_2015_ela',
+      'total_district_enrollment_in_ela_grade_3_8_hs_all',
+      'pct_not_taking_ela_tests_district_all',
+      'district_pct_proficiency_in_math_parcc_2015_math',
+      'total_district_enrollment_in_math_grade_3_8_hs_all',
+      'pct_not_taking_math_tests_district_all',
+    ]
+
+    with open(papermap) as f:
+        rcdts_codes = []
+        paper_rcdts_ids = {}
+
+        reader = csv.DictReader(f)
+
+        for row in reader:
+            paper = row[papercol].strip()
+            if paper == "":
+                continue
+
+            rcdts_code = row[rcdtscol].strip()
+
+            paper_codes = [p.strip() for p in paper.split(',')]
+            for paper_code in paper_codes:
+                paper_ids = paper_rcdts_ids.setdefault(paper_code, [])
+                paper_ids.append(rcdts_code)
+
+                if not rcdts_code.endswith('0000'):
+                    rcdts_codes.append(rcdts_code)
+
+        results_by_rcdts = {}
+                
+        engine = create_engine(database)
+
+        with engine.connect() as connection:
+            results = summary_query(connection, year, rcdts_codes)
+            for row in results:
+                rcdts_id = row['school_id']
+                district_id = rcdts_id[:-4] + "0000"
+                results_by_rcdts[rcdts_id] = row
+                results_by_rcdts[district_id] = _district_result(row)
+
+        fieldnames.insert(0, 'paper')
+
+        for paper_code, rcdts_ids_for_paper in paper_rcdts_ids.items():
+            output_filename = "{}__{}.{}".format(filename_prefix, paper_code,
+                filename_suffix)
+            output_path = os.path.join(outputdir, output_filename)
+            with open(output_path, 'w') as fout:
+                writer = csv.DictWriter(fout, fieldnames=fieldnames,
+                    extrasaction='ignore')
+                writer.writeheader()
+
+                for rcdts_id in rcdts_ids_for_paper:
+                    row = results_by_rcdts[rcdts_id].copy()
+                    row['paper'] = paper_code
+                    writer.writerow(row)
