@@ -1,5 +1,7 @@
 import csv
 
+import logging
+
 class AssessmentLoader2015(object):
     def set_schema(self, schema):
         self._schema = schema
@@ -8,13 +10,23 @@ class AssessmentLoader2015(object):
         table_data = {t.name: [] for t in self._schema.tables}
 
         reader = csv.reader(f, delimiter=';')
+        num_rows = 0
+
+        logging.info("Beginning parsing data file")
+
         for row in reader:
+            num_rows += 1
             for tabledef in self._schema.tables:
                 insert_row = self.get_row_values(tabledef, row) 
                 table_data[tabledef.name].append(insert_row)
 
+        logging.info("Parsed {} rows".format(num_rows))        
+
         for tabledef in self._schema.tables:
             table = tabledef.as_sqlalchemy(metadata)
+            logging.info("Inserting {} rows into {}".format(
+                len(table_data[tabledef.name]), tabledef.name))
+                   
             insert = table.insert().values(table_data[tabledef.name])
             connection.execute(insert)
 
