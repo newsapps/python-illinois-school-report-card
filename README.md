@@ -3,6 +3,14 @@ python-illinois-school-report-card
 
 Python package for working with Illinois Board of Education School Report Card data.
 
+This is an attempt to make a reproducible data loading and analysis pipeline as well
+as provide an interface to the data that can be used both for reporting and to
+drive news applications.
+
+Previously, this data was loaded into MongoDB.  While this allowed us to use the long strings in the layout spreadsheet as the field names, and probably avoids hitting the column limits on tables in a RDBMS, a NoSQL store doesn't seem like the best format for reporting.
+
+This was written for the 2015 release.  We'll definitely want to revisit this and refactor the code to minimize the amount of code that has to be written from year-to-year. 2015's data was a bit strange since the assessment data and other pieces of the report card were released at different times and in different files.  This might not be the case in the future. 
+
 Assumptions
 -----------
 
@@ -23,7 +31,7 @@ Installation
 Data loading
 ------------
 
-Download data somewhere.  You'll need to specify a
+Download data somewhere.
 
 Create a database:
 
