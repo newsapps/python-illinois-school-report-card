@@ -1,7 +1,9 @@
+"""
+Command line tasks for working with report card data
+"""
 import csv
 import logging
 import os
-import sys
 
 from invoke import task
 
@@ -14,6 +16,13 @@ from ilreportcard.query import summary_query
 logging.basicConfig(level=logging.INFO)
 
 DEFAULT_DATABASE = "postgresql://localhost:5432/school_report_card"
+
+# TODO: Is invoke the best task runner to use? I like that it has
+# dependencies between tasks, but its discovery mechanism for the
+# tasks module is kind of annoying.
+
+# TODO: Document arguments to these task functions.  For now, see
+# the examples in the README
 
 @task
 def create_assessment_schema(year, layout, database=DEFAULT_DATABASE):
@@ -57,16 +66,17 @@ def _district_result(result):
     return out
 
 
+# TODO: Document this
 @task
 def generate_print_tables(year, papermap, papercol, rcdtscol,
         outputdir=os.getcwd(), outputfilename='print_tables.csv', database=DEFAULT_DATABASE):
+    """Generate CSVs for school/district test information in print"""
     filename_prefix = outputfilename.split('.')[0]
     filename_suffix = '.'.join(outputfilename.split('.')[1:])
 
     fieldnames = [
       'school_name',
       'district_name',
-      #'grades_in_school',
       'school_pct_proficiency_in_ela_parcc_2015_ela',
       'total_school_enrollment_in_ela_grade_3_8_hs_all',
       'pct_not_taking_ela_tests_school_all',
