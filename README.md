@@ -31,7 +31,7 @@ Create a database:
 
 Create database tables for assessment data:
 
-    invoke --root ./ilreportcard/ create_assessment_schema --layout=./data/2015\ School\ Report\ Card/RC15_assessment_layout.xlsx --year=2015 --database='postgresql://localhost:5432/school_report_card'
+    invoke --root ./ilreportcard/ create_assessment_schema --layout=./data/2015\ School\ Report\ Card/RC15_assessment_layout.xlsx --year=2015 --database='postgresql://localhost:5432/school_report_card' --flush
 
 Load assessment data:
 

@@ -6,7 +6,7 @@ class AssessmentLoader2015(object):
     def set_schema(self, schema):
         self._schema = schema
 
-    def load(self, f, metadata, connection):
+    def load(self, f, metadata, connection, flush=False):
         table_data = {t.name: [] for t in self._schema.tables}
 
         reader = csv.reader(f, delimiter=';')
@@ -24,9 +24,14 @@ class AssessmentLoader2015(object):
 
         for tabledef in self._schema.tables:
             table = tabledef.as_sqlalchemy(metadata)
+
+            if flush:
+                logging.info("Deleting existing data from {}".format(tabledef.name))
+                connection.execute(table.delete())
+
             logging.info("Inserting {} rows into {}".format(
                 len(table_data[tabledef.name]), tabledef.name))
-                   
+
             insert = table.insert().values(table_data[tabledef.name])
             connection.execute(insert)
 

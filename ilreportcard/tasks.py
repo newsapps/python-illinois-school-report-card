@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO)
 DEFAULT_DATABASE = "postgresql://localhost:5432/school_report_card"
 
 @task
-def create_assessment_schema(year, layout, database="DEFAULT_DATABASE"):
+def create_assessment_schema(year, layout, database=DEFAULT_DATABASE):
     with open(layout, 'rb') as f:
         schema = get_assessment_schema(int(year))
         schema.from_file(f)
@@ -25,14 +25,14 @@ def create_assessment_schema(year, layout, database="DEFAULT_DATABASE"):
         metadata = MetaData()
 
         for tabledef in schema.tables:
-            table = tabledef.as_sqlalchemy(metadata) 
-
-        metadata.create_all(engine)
+            table = tabledef.as_sqlalchemy(metadata)
+            table.create(engine, checkfirst=True)
 
 
 @task
 def load_assessment_data(year, layout, data,
-        database="DEFAULT_DATABASE"):
+        flush=False,
+        database=DEFAULT_DATABASE):
     with open(layout, 'rb') as f:
         schema = get_assessment_schema(int(year))
         schema.from_file(f)
@@ -43,7 +43,8 @@ def load_assessment_data(year, layout, data,
         with engine.connect() as connection:
             loader = get_assessment_loader(int(year))
             loader.set_schema(schema)
-            loader.load(f, metadata, connection)
+            loader.load(f, metadata, connection, flush)
+
 
 def _district_result(result):
     """Remove school fields from a result row, leaving only the district ones"""

@@ -352,6 +352,8 @@ class AssessmentSchema2015(object):
 
             column_index += 1
 
+        # Add the last discovered table
+        self._tables.append(table)
 
     @property
     def columns(self):
