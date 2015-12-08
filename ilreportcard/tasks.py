@@ -26,6 +26,7 @@ def create_assessment_schema(year, layout, database=DEFAULT_DATABASE):
 
         for tabledef in schema.tables:
             table = tabledef.as_sqlalchemy(metadata)
+            logging.info("Creating database table {}".format(tabledef.name))
             table.create(engine, checkfirst=True)
 
 
