@@ -28,7 +28,6 @@ setup(
         'SQLAlchemy>=1.0.9',
         'invoke>=0.11.1',
         'psycopg2>=2.6.1',
-        'illinois-educational-entities',
     ],
     entry_points="",
     tests_require=[
