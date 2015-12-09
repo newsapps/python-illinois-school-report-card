@@ -42,17 +42,16 @@ def summary_query_2015(conn, rcdts_ids=None):
         a.school_pct_proficiency_in_math_parcc_2015_math,
         a.district_pct_proficiency_in_math_parcc_2015_math,
         ps.tested_enrollment_ela,
-        ps.tested_ela,
-        (1 - (CAST(ps.tested_ela AS float)/ ps.tested_enrollment_ela)) * 100 AS pct_not_tested_ela,
+        (CAST(ps.absent_ela + ps.refusal_ela AS float) / ps.tested_enrollment_ela) * 100 AS pct_not_tested_ela,
         ps.tested_enrollment_math,
         ps.tested_math,
-        (1 - (CAST(ps.tested_math AS float)/ ps.tested_enrollment_math)) * 100 AS pct_not_tested_math,
+        (CAST(ps.absent_math + ps.refusal_math AS float) / ps.tested_enrollment_math) * 100 AS pct_not_tested_math,
         pd.tested_enrollment_ela AS tested_enrollment_ela_district,
         pd.tested_ela AS tested_ela_district,
-        (1 - (CAST(pd.tested_ela AS float) / pd.tested_enrollment_ela)) * 100 AS pct_not_tested_ela_district,
+        (CAST(pd.absent_ela + pd.refusal_ela AS float) / pd.tested_enrollment_ela) * 100 AS pct_not_tested_ela_district,
         pd.tested_enrollment_math AS tested_enrollment_math_district,
         pd.tested_math AS tested_math_district,
-        (1 - (CAST(pd.tested_math AS float) / pd.tested_enrollment_math)) * 100 AS pct_not_tested_math_district
+        (CAST(pd.absent_math + pd.refusal_math AS float) / pd.tested_enrollment_math) * 100 AS pct_not_tested_math_district
     FROM assessment_2015_schools s 
     JOIN parcc_participation_2015 ps on ps.rcdts = s.school_id
     JOIN parcc_participation_2015 pd on pd.rcdts = overlay(s.school_id placing
