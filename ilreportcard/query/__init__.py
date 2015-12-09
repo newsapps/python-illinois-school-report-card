@@ -1,56 +1,69 @@
 from sqlalchemy.sql import text
 
-def summary_query(conn, year, school_ids=None):
+def summary_query(conn, year, rcdts_ids=None):
     f = globals()['summary_query_{}'.format(year)]
-    return f(conn, school_ids)
+    return f(conn, rcdts_ids)
 
 
-def summary_query_2015(conn, school_ids=None):
+def summary_query_2015(conn, rcdts_ids=None):
     """
     Query for print agate
 
     This includes:
 
-    * % passing PARCC ELA School (Column 259)
-    * % passing PARCC ELA District (Column 260)
-    * % passing PARCC Math School (Column 263)
-    * % passing PARCC Math District (Column 265)
-    * Total enrollment ELA School (Column 7)
-    * Total enrollment ELA District (Column 9)
-    * % not taking ELA tests School (Column 11)
-    * % not taking ELA tests District (Column 13)
-    * Total enrollment Math School (Column 123)
-    * Total enrollment Math District (Column 125)
-    * % not taking Math School (Column 127) 
-    * % not taking Math District (Column 129)
+    * School RCDTS ID
+    * District RCDTS ID
+    * School Name
+    * Grades in School
+    * % proficient PARCC ELA School (Column 259)
+    * % proficient PARCC ELA District (Column 260)
+    * % proficient PARCC Math School (Column 263)
+    * % proficient PARCC Math District (Column 265)
+    * Tested enrollment PARCC ELA School
+    * # Tested PARCC ELA School
+    * Tested enrollment PARCC Math School
+    * # Tested PARCC Math School
+    * Tested enrollment PARCC ELA District
+    * # Tested PARCC ELA District
+    * Tested enrollment PARCC Math District
+    * # Tested PARCC Math District
     
     """
+    # TODO: Document this and where the join table is coming from 
     query = """
-    SELECT s.school_id, s.school_type_code, s.school_name, s.district_name,
+    SELECT s.school_id,
+        overlay(s.school_id placing '0000' from 12 for 4) AS district_id,
+        s.school_name,
         s.grades_in_school,
         a.school_pct_proficiency_in_ela_parcc_2015_ela,
         a.district_pct_proficiency_in_ela_parcc_2015_ela,
         a.school_pct_proficiency_in_math_parcc_2015_math,
         a.district_pct_proficiency_in_math_parcc_2015_math,
-        p.total_school_enrollment_in_ela_grade_3_8_hs_all,
-        p.total_district_enrollment_in_ela_grade_3_8_hs_all,
-        p.pct_not_taking_ela_tests_school_all,
-        p.pct_not_taking_ela_tests_district_all,
-        p.total_school_enrollment_in_math_grade_3_8_hs_all,
-        p.total_district_enrollment_in_math_grade_3_8_hs_all,
-        p.pct_not_taking_math_tests_school_all,
-        p.pct_not_taking_math_tests_district_all
+        ps.tested_enrollment_ela,
+        ps.tested_ela,
+        (1 - (CAST(ps.tested_ela AS float)/ ps.tested_enrollment_ela)) * 100 AS pct_not_tested_ela,
+        ps.tested_enrollment_math,
+        ps.tested_math,
+        (1 - (CAST(ps.tested_math AS float)/ ps.tested_enrollment_math)) * 100 AS pct_not_tested_math,
+        pd.tested_enrollment_ela AS tested_enrollment_ela_district,
+        pd.tested_ela AS tested_ela_district,
+        (1 - (CAST(pd.tested_ela AS float) / pd.tested_enrollment_ela)) * 100 AS pct_not_tested_ela_district,
+        pd.tested_enrollment_math AS tested_enrollment_math_district,
+        pd.tested_math AS tested_math_district,
+        (1 - (CAST(pd.tested_math AS float) / pd.tested_enrollment_math)) * 100 AS pct_not_tested_math_district
     FROM assessment_2015_schools s 
+    JOIN parcc_participation_2015 ps on ps.rcdts = s.school_id
+    JOIN parcc_participation_2015 pd on pd.rcdts = overlay(s.school_id placing
+    '0000' from 12 for 4)
     JOIN assessment_2015_overall_achievement_parcc_dlm_performance a ON a.school_id = s.school_id
-    JOIN assessment_2015_participation p ON p.school_id = s.school_id
     """
 
-    if school_ids is not None:
-        query += "WHERE s.school_id = ANY(:school_ids)"
+    if rcdts_ids is not None:
+        query += "WHERE s.school_id = ANY(:rcdts_ids)"
 
     s = text(query)
     results = []
-    for row in conn.execute(s, school_ids=school_ids):
+    for row in conn.execute(s, rcdts_ids=rcdts_ids):
         row_dict = {k:v for k,v in row.items()}
         results.append(row_dict)
 
