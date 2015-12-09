@@ -3,7 +3,8 @@ from copy import copy
 from enum import Enum
 import re
 
-from sqlalchemy import Column as SQAColumn, Table as SQATable, String, Integer, Float
+from sqlalchemy import (Column as SQAColumn, Table as SQATable, String, Integer,
+    Float, Boolean)
 import xlrd
 from xlrd import XL_CELL_NUMBER
 
@@ -17,6 +18,7 @@ class COLUMN_TYPES(Enum):
     INTEGER = 1
     FLOAT = 2
     STRING = 3
+    BOOLEAN = 4
 
 
 def get_column_type(column_type_string):
@@ -105,7 +107,12 @@ class Column(object):
                 if value == '':
                     return None
                 else:
-                    return int(value.replace(',', ''))
+                    try:
+                        value = value.replace(',', '')
+                    except AttributeError:
+                        pass
+
+                    return int(value)
             elif self.column_type == COLUMN_TYPES.FLOAT:
                 if value == '':
                     return None
@@ -149,7 +156,8 @@ class Table(object):
         column_type_map = {
             COLUMN_TYPES.INTEGER: Integer,
             COLUMN_TYPES.FLOAT: Float,
-            COLUMN_TYPES.STRING: String
+            COLUMN_TYPES.STRING: String,
+            COLUMN_TYPES.BOOLEAN: Boolean,
         }
 
         columns = []
@@ -163,7 +171,21 @@ class Table(object):
         return SQATable(self.name, metadata, *columns)
 
 
-class AssessmentSchema2015(object):
+class BaseSchema(object):
+    def __init__(self, *args, **kwargs):
+        self._tables = []
+        self._columns = []
+
+    @property
+    def columns(self):
+        return self._columns
+
+    @property
+    def tables(self):
+        return self._tables
+
+
+class AssessmentSchema2015(BaseSchema):
     """Column and table definitions for the 2015 report card assessment data"""
 
     # Schema name.  This will also be used to prefix tables when created
@@ -258,10 +280,6 @@ class AssessmentSchema2015(object):
     # the auto-generated name based on the description in the record layout,
     # use something explicit and clear.
     SCHOOL_ID_COLUMN_NAME = "school_id"
-
-    def __init__(self, *args, **kwargs):
-        self._tables = []
-        self._columns = []
 
     @classmethod
     def get_column_name(cls, row):    
@@ -446,18 +464,81 @@ class AssessmentSchema2015(object):
         # of tables
         self._tables.append(table)
 
-    @property
-    def columns(self):
-        return self._columns
-
-    @property
-    def tables(self):
-        return self._tables
-
 
 def get_assessment_schema(year):
     """Get a schema class for a particular year's data"""
     if year == 2015:
         return AssessmentSchema2015()
+
+    raise ValueError("No schema found for {}".format(year))
+
+
+class PARCCParticipationSchema2015(BaseSchema):
+    """
+    Schema for data from PARCC participation spreadsheet
+
+    This was provided from Diane Rado as a separate file as the data in
+    the report card data dump reflected aggregates of the PARCC and DLM
+    participation numbers.
+
+    """
+    name = 'parcc_participation_2015'
+
+    def __init__(self):
+        self._tables = []
+
+        table = Table(name='parcc_participaton_2015')
+        self._tables.append(table)
+
+        self._columns = [
+            Column(column_index=0, name="rcdts",
+                column_type=COLUMN_TYPES.STRING, primary_key=True),        
+            Column(column_index=1, name="county",
+                column_type=COLUMN_TYPES.STRING),
+            Column(column_index=2, name="district_number",
+                column_type=COLUMN_TYPES.STRING),
+            Column(column_index=3, name="district_name_school_name",
+                column_type=COLUMN_TYPES.STRING),
+            Column(column_index=4, name="city",
+                column_type=COLUMN_TYPES.STRING),
+            Column(column_index=5, name="tested_enrollment_ela",
+                column_type=COLUMN_TYPES.INTEGER),
+            Column(column_index=6, name="tested_enrollment_masked_ela",
+                column_type=COLUMN_TYPES.BOOLEAN),
+            Column(column_index=7, name="tested_ela",
+                column_type=COLUMN_TYPES.INTEGER),
+            Column(column_index=8, name="absent_ela",
+                column_type=COLUMN_TYPES.INTEGER),
+            Column(column_index=9, name="refusal_ela",
+                column_type=COLUMN_TYPES.INTEGER),
+            Column(column_index=10, name="other_ela",
+                column_type=COLUMN_TYPES.INTEGER),
+            Column(column_index=11, name="invalid_score_ela",
+                column_type=COLUMN_TYPES.INTEGER),
+            Column(column_index=12, name="tested_enrollment_math",
+                column_type=COLUMN_TYPES.INTEGER),
+            Column(column_index=13, name="tested_enrollment_masked_math",
+                column_type=COLUMN_TYPES.BOOLEAN),
+            Column(column_index=14, name="tested_math",
+                column_type=COLUMN_TYPES.INTEGER),
+            Column(column_index=15, name="absent_math",
+                column_type=COLUMN_TYPES.INTEGER),
+            Column(column_index=16, name="refusal_math",
+                column_type=COLUMN_TYPES.INTEGER),
+            Column(column_index=17, name="other_math",
+                column_type=COLUMN_TYPES.INTEGER),
+            Column(column_index=18, name="invalid_score_math",
+                column_type=COLUMN_TYPES.INTEGER),
+        ]
+
+        for column in self._columns:
+            table.add_column(column)
+
+
+def get_parcc_participation_schema(year):
+    """Get a schema class for a particular year's data"""
+
+    if year == 2015:
+        return PARCCParticipationSchema2015()
 
     raise ValueError("No schema found for {}".format(year))

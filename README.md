@@ -35,6 +35,12 @@ The data is available from an SFTP server:
 
 sftp://RC15:R3port;15@206.166.105.117
 
+### Included data
+
+A few files are included in the data directory as they were emailed to reporters and not published as part of the report card data dump.  Including them in this repo avoids the files getting lost on our hard drives or in our inboxes.
+
+* PARCCParticipation2015.xlsx - 2015 PARCC participation numbers.  The participation numbers in the report card dump includes both PARCC and DLM.
+
 Data loading
 ------------
 
@@ -49,6 +55,15 @@ Create database tables for assessment data:
 Load assessment data:
 
     invoke --root ./ilreportcard/ load_assessment_data --year=2015 --layout=./data/2015\ School\ Report\ Card/RC15_assessment_layout.xlsx --data=./data/2015\ School\ Report\ Card/rc15_assessment.txt --flush --database='postgresql://localhost:5432/school_report_card'
+
+Create the database table for the PARCC participation data:
+
+    invoke --root=./ilreportcard/ create_parcc_participation_schema --year=2015 --database='postgresql://localhost:5432/school_report_card'
+
+Load PARCC participation data:
+
+    invoke --root=./ilreportcard/ load_parcc_participation_data --year=2015 --data=./data/PARCCParticipation2015.xlsx --flush --database='postgresql://localhost:5432/school_report_card'
+
 
 Updating for a new year's data
 ------------------------------
