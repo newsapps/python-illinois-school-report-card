@@ -12,8 +12,9 @@ def summary_query_2015(conn, rcdts_ids=None):
     This includes:
 
     * School RCDTS ID
-    * District RCDTS ID
     * School Name
+    * District RCDTS ID
+    * District Name
     * Grades in School
     * % proficient PARCC ELA School (Column 259)
     * % proficient PARCC ELA District (Column 260)
@@ -32,8 +33,9 @@ def summary_query_2015(conn, rcdts_ids=None):
     # TODO: Document this and where the join table is coming from 
     query = """
     SELECT s.school_id,
-        overlay(s.school_id placing '0000' from 12 for 4) AS district_id,
         s.school_name,
+        overlay(s.school_id placing '0000' from 12 for 4) AS district_id,
+        s.district_name,
         s.grades_in_school,
         a.school_pct_proficiency_in_ela_parcc_2015_ela,
         a.district_pct_proficiency_in_ela_parcc_2015_ela,
