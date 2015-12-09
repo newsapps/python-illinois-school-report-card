@@ -16,7 +16,7 @@ except (IOError, ImportError, OSError):
 exec(open(os.path.join('ilreportcard', 'version.py')).read())
 
 setup(
-    name='illinois_educational_entities',
+    name='illinois-school-report-card',
     version=__version__,
     author='Geoff Hing for the Chicago Tribune Dataviz Team',
     author_email='geoffhing@gmail.com',
