@@ -487,7 +487,7 @@ class PARCCParticipationSchema2015(BaseSchema):
     def __init__(self):
         self._tables = []
 
-        table = Table(name='parcc_participaton_2015')
+        table = Table(name='parcc_participation_2015')
         self._tables.append(table)
 
         self._columns = [
