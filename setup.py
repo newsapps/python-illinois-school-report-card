@@ -23,7 +23,7 @@ setup(
     packages=find_packages(exclude=["tests", "tests.*"]),
     include_package_data=True,
     install_requires=[
-        'xlrd>=0.9.4',
+        'xlrd>=0.9.3',
         'enum34>=1.1.1',
         'SQLAlchemy>=1.0.9',
         'invoke>=0.11.1',
