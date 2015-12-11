@@ -1,5 +1,14 @@
 from sqlalchemy.sql import text
 
+CHICAGO_AREA_COUNTIES = [
+    'Cook',
+    'Dupage',
+    'Will',
+    'Lake',
+    'McHenry',
+    'Kane',
+]
+
 def summary_query(conn, year, rcdts_ids=None):
     f = globals()['summary_query_{}'.format(year)]
     return f(conn, rcdts_ids)
@@ -63,8 +72,69 @@ def summary_query_2015(conn, rcdts_ids=None):
         query += "WHERE s.school_id = ANY(:rcdts_ids)"
 
     s = text(query)
+    return get_result_dicts(conn.execute(s, rcdts_ids=rcdts_ids))
+
+
+def best_worst_performers_query(conn, year, subject, order, limit=50, counties=None):
+    f = globals()['summary_query_{}'.format(year)]
+    return f(conn, subject, order, limit, counties)
+
+
+def best_worst_performers_query_2015(conn, subject, order, limit, counties):
+    """
+    Query to get best and worst peformers by subject specified
+
+    Query to find top performers in ELA with participation rates in the Chicago area
+    and that had at least 85% participation among eligible students
+    
+    This includes:
+    
+    * School RDTS
+    * School county
+    * District/school number
+    * District name
+    * City
+    * % proficient
+    * Tested students
+    * Enrollment
+    * % tested
+
+    """
+
+    query_params = {}
+
+    query = """
+    SELECT ps.rcdts as school_id,
+      ps.district_name_school_name,
+      ps.city,
+      ps.county,
+      ps.district_number,
+      ps.tested_enrollment_{subject},
+      ps.tested_{subject},
+      CAST(tested_{subject} as float)/tested_enrollment_{subject} as percent_tested_{subject},
+      pd.school_pct_proficiency_in_{subject}_parcc_2015_{subject} as passing
+    FROM parcc_participation_2015 ps 
+    JOIN assessment_2015_overall_achievement_parcc_dlm_performance pd on pd.school_id = ps.rcdts
+    WHERE (CAST(ps.tested_{subject} as float)/ps.tested_enrollment_{subject}) >= .85
+    """.format(subject=subject)
+
+    if counties is not None:
+        query += 'AND ps.county = ANY(:counties)'
+        query_params['counties'] = counties
+
+    query += """
+    ORDER BY passing {order}
+    LIMIT {limit};
+    """.format(order=order, limit=limit)
+
+    s = text(query)
+
+    return get_result_dicts(conn.execute(s, **query_params))
+
+
+def get_result_dicts(result):
     results = []
-    for row in conn.execute(s, rcdts_ids=rcdts_ids):
+    for row in result:
         row_dict = {k:v for k,v in row.items()}
         results.append(row_dict)
 
