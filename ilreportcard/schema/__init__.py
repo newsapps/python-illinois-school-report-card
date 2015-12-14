@@ -88,15 +88,38 @@ def valid_column_name(s):
 
     return slugify(s_valid)
 
+def default_converter(columndef, value):
+    if columndef.column_type == COLUMN_TYPES.INTEGER:
+        if value == '':
+            return None
+        else:
+            try:
+                value = value.replace(',', '')
+            except AttributeError:
+                pass
+
+            return int(value)
+    elif columndef.column_type == COLUMN_TYPES.FLOAT:
+        if value == '':
+            return None
+        else:
+            return float(value)
+    elif columndef.column_type == COLUMN_TYPES.STRING:
+        return str(value)
+
+    return value
+
 
 class Column(object):
     """Data column definition"""
-    def __init__(self, column_index, name, column_type, primary_key=False, table=None):
+    def __init__(self, column_index, name, column_type, primary_key=False,
+            table=None, converter=default_converter):
         self.column_index = column_index
         self.name = name
         self.column_type = column_type
         self.table = table
         self.primary_key = primary_key
+        self.converter = converter
 
     def __repr__(self):
         return 'Column(column_index={}, name="{}", column_type={}, primary_key={})'.format(
@@ -119,30 +142,7 @@ class Column(object):
         )
 
     def convert_value(self, value):
-        try:
-            if self.column_type == COLUMN_TYPES.INTEGER:
-                if value == '':
-                    return None
-                else:
-                    try:
-                        value = value.replace(',', '')
-                    except AttributeError:
-                        pass
-
-                    return int(value)
-            elif self.column_type == COLUMN_TYPES.FLOAT:
-                if value == '':
-                    return None
-                else:
-                    return float(value)
-            elif self.column_type == COLUMN_TYPES.STRING:
-                return str(value)
-        except ValueError:
-            print('"{}"'.format(value))
-            print(value == "")
-            raise
-
-        return value
+        return self.converter(self, value)
         
 
 class Table(object):
