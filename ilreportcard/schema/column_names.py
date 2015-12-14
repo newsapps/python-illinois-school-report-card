@@ -12,6 +12,9 @@ import re
 def replace_percent_sign(s):
     return re.sub(r'^%( OF){0,1}', 'PCT', s, flags=re.I)
 
+def replace_number_symbol(s):
+    return s.replace('#', 'NUM')
+
 def abbreviate_percent(s):
     return re.sub(r'PERCENT(AGE){0,1}', 'PCT', s, flags=re.I)
 
@@ -33,6 +36,9 @@ def remove_students(s):
 def fix_particially(s):
     return s.replace('PARTICIALLY', 'PARTIALLY')
 
+def fix_averge(s):
+    return s.replace('AVERGE', 'AVERAGE')
+
 def shorten_expectations(s):
     return s.replace('EXPECTATIONS', 'EXPECTNS')
 
@@ -41,6 +47,12 @@ def shorten_subregion(s):
 
 def shorten_native_hawaiian(s):
     return s.replace('NATIVE HAWAIIAN AND OTHERS', 'HAWAIIAN')
+
+def shorten_average(s):
+    return s.replace('AVERAGE', 'AVG')
+
+def shorten_physical_education(s):
+    return s.replace('PHYSICAL EDUCATION', 'PHYS ED')
 
 def number_word_to_numeral(s):
     """
