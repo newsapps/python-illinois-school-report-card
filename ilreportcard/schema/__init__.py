@@ -8,6 +8,23 @@ from sqlalchemy import (Column as SQAColumn, Table as SQATable, String, Integer,
 import xlrd
 from xlrd import XL_CELL_NUMBER
 
+from .column_names import (
+    apply_filters,
+    replace_percent_sign,    
+    abbreviate_percent,
+    remove_and,
+    remove_for,
+    remove_yet,
+    remove_composite,
+    fix_particially,
+    shorten_expectations,
+    shorten_subregion,
+    remove_students,
+    shorten_native_hawaiian,
+    number_word_to_numeral,
+)
+
+
 class COLUMN_TYPES(Enum):
     """
     Constants for column types in the data
@@ -281,6 +298,24 @@ class AssessmentSchema2015(BaseSchema):
     # use something explicit and clear.
     SCHOOL_ID_COLUMN_NAME = "school_id"
 
+    DESCRIPTION_FILTERS = [
+        replace_percent_sign,    
+        abbreviate_percent,
+        remove_and,
+        remove_for,
+        remove_yet,
+        remove_composite,
+        fix_particially,
+        shorten_expectations,
+        shorten_subregion,
+        remove_students,
+    ]
+
+    MODIFIER_FILTERS = [
+        shorten_native_hawaiian,
+        number_word_to_numeral,
+    ]
+
     @classmethod
     def get_column_name(cls, row):    
         """
@@ -318,27 +353,10 @@ class AssessmentSchema2015(BaseSchema):
         # Much of the rest of this code is to try to shorten the value
         # because just slugifying/concatinating the bits creates column
         # names that exceed the maximum length allowed by PostgreSQL
+        description = apply_filters(description, cls.DESCRIPTION_FILTERS)
 
-        # Replace some characters in the various components of the column
-        # name to make them shorter or using alphanumeric characters
-        description = re.sub(r'^%( OF){0,1}', 'PCT', description)
-        description = description.replace('PERCENTAGE OF', 'PCT')
-        description = description.replace('AND', '')
-        description = description.replace('and', '')
-        description = description.replace('FOR', '')
-        description = description.replace('PERCENT OF', 'PCT')
-        description = description.replace('YET', '')
-        # Composite also shows up in modifier, so we can get rid of it
-        # in description
-        description = description.replace('COMPOSITE', '')
-        description = description.replace('PARTICIALLY', 'PARTIALLY')
-        description = description.replace('EXPECTATIONS', 'EXPECTNS')
-        description = description.replace('SUBREGION', 'SUBRGN')
-        description = description.replace('STUDENTS', "")
-
-        modifier = modifier.replace('NATIVE HAWAIIAN AND OTHERS',
-            'HAWAIIAN')
-        modifier = modifier.replace('TWO', '2')
+        # Replace some characters in the various components of the modifier column
+        modifier = apply_filters(modifier, cls.MODIFIER_FILTERS)
 
         # This particular case, e.g.
         # "# of LEP students who have attended schools in the U.S. for less than 12 months and are not assessed on the State's ELA test (SCHOOL)"
