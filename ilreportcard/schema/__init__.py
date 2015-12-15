@@ -284,11 +284,25 @@ class ReportCardSchema2015(ColumnNaming2015Mixin, BaseSchema):
     def get_column_name(cls, row):
         # Grab cells needed to make the column name
         subgroup_specifier = str(row[2].value)
-        description = row[5].value
+        description = row[5].value.strip()
         test = row[1].value
 
-        if description.strip().startswith("SCHOOL ID"):
+        # Some of the base metadata fields have example values in the
+        # description.  We'll just strip those out explicitly.
+        # For example:
+        # "SCHOOL TYPE CODE (0,1,2,C)" -> school_type_code
+
+        if description.startswith("SCHOOL ID"):
             return 'school_id'
+
+        if description.startswith("SCHOOL TYPE CODE"):
+            return 'school_type_code'
+
+        if description.startswith("DISTRICT TYPE CODE"):
+            return 'district_type_code'
+
+        if description.startswith("DISTRICT SIZE CODE"):
+            return 'district_size_code'
 
         # Replace/clean individual components of the column name for brevity
         description = apply_filters(description, cls.DESCRIPTION_FILTERS)
