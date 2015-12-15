@@ -23,12 +23,16 @@ DEFAULT_DATABASE = "postgresql://localhost:5432/school_report_card"
 # TODO: Document arguments to these task functions.  For now, see
 # the examples in the README
 
-def create_tables_from_schema(schema, database):
+def create_tables_from_schema(schema, database, drop=False):
     engine = create_engine(database)
     metadata = MetaData()
 
     for tabledef in schema.tables:
         table = tabledef.as_sqlalchemy(metadata)
+        if drop:
+            logging.info("Dropping database table {}".format(tabledef.name))
+            table.drop(engine)
+
         logging.info("Creating database table {}".format(tabledef.name))
         table.create(engine, checkfirst=True)
 
@@ -42,11 +46,12 @@ def load_data(loader, f, database, flush):
 
 
 @task
-def create_report_card_schema(year, layout, database=DEFAULT_DATABASE):
+def create_report_card_schema(year, layout, database=DEFAULT_DATABASE,
+        drop=False):
     with open(layout, 'rb') as f:
         schema = get_report_card_schema(int(year))
         schema.from_file(f)
-        create_tables_from_schema(schema, database)
+        create_tables_from_schema(schema, database, drop=drop)
 
 
 @task
@@ -63,11 +68,11 @@ def load_report_card_data(year, layout, data, flush=False,
 
 
 @task
-def create_assessment_schema(year, layout, database=DEFAULT_DATABASE):
+def create_assessment_schema(year, layout, database=DEFAULT_DATABASE, drop=False):
     with open(layout, 'rb') as f:
         schema = get_assessment_schema(int(year))
         schema.from_file(f)
-        create_tables_from_schema(schema, database)
+        create_tables_from_schema(schema, database, drop=drop)
 
 
 @task
@@ -85,9 +90,10 @@ def load_assessment_data(year, layout, data,
 
 
 @task
-def create_parcc_participation_schema(year, database=DEFAULT_DATABASE):
+def create_parcc_participation_schema(year, database=DEFAULT_DATABASE,
+        drop=False):
     schema = get_parcc_participation_schema(int(year))
-    create_tables_from_schema(schema, database)
+    create_tables_from_schema(schema, database, drop=drop)
 
 
 @task
