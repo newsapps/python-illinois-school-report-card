@@ -8,11 +8,33 @@ from sqlalchemy import (Column as SQAColumn, Table as SQATable, String, Integer,
 import xlrd
 from xlrd import XL_CELL_NUMBER
 
+from .column_names import (
+    apply_filters,
+    replace_number_symbol,
+    replace_percent_sign,
+    abbreviate_percent,
+    remove_and,
+    remove_for,
+    remove_yet,
+    remove_composite,
+    fix_averge,
+    fix_particially,
+    shorten_subregion,
+    shorten_average,
+    shorten_expectations,
+    shorten_physical_education,
+    shorten_subregion,
+    remove_students,
+    shorten_native_hawaiian,
+    number_word_to_numeral,
+)
+
+
 class COLUMN_TYPES(Enum):
     """
     Constants for column types in the data
-    
-    Reflects what we care about, which is the type of database column to 
+
+    Reflects what we care about, which is the type of database column to
     create and the Python data type to convert a field.
     """
     INTEGER = 1
@@ -28,8 +50,9 @@ def get_column_type(column_type_string):
     """
     column_types = (
         (r'A\d+', COLUMN_TYPES.STRING),
-        (r'COMMA\d\.0', COLUMN_TYPES.INTEGER),
+        (r'COMMA\d(\.0){0,1}', COLUMN_TYPES.INTEGER),
         (r'F\d+\.\d+', COLUMN_TYPES.FLOAT),
+        (r'DOLLAR\d', COLUMN_TYPES.FLOAT),
     )
 
     for pattern, column_type in column_types:
@@ -40,7 +63,7 @@ def get_column_type(column_type_string):
         column_type_string))
 
 
-def slugify(s):    
+def slugify(s):
     s_valid = s.strip()
 
     # Replace '-' with '_'
@@ -71,15 +94,49 @@ def valid_column_name(s):
 
     return slugify(s_valid)
 
+def default_converter(columndef, value):
+    try:
+        if columndef.column_type == COLUMN_TYPES.INTEGER:
+            if value == '':
+                return None
+            else:
+                try:
+                    value = value.replace(',', '')
+                except AttributeError:
+                    pass
+
+                return int(value)
+        elif columndef.column_type == COLUMN_TYPES.FLOAT:
+            if value == '':
+                return None
+            else:
+                try:
+                    value = value.replace('$', '')
+                    value = value.replace(',', '')
+                except AttributeError:
+                    pass
+
+                return float(value)
+        elif columndef.column_type == COLUMN_TYPES.STRING:
+            return str(value)
+    except ValueError:
+        msg = "Could not convert value '{}' to {} for column '{}' (index {})"
+        raise ValueError(msg.format(value, columndef.column_type,
+            columndef.name, columndef.column_index))
+
+    return value
+
 
 class Column(object):
     """Data column definition"""
-    def __init__(self, column_index, name, column_type, primary_key=False, table=None):
+    def __init__(self, column_index, name, column_type, primary_key=False,
+            table=None, converter=default_converter):
         self.column_index = column_index
         self.name = name
         self.column_type = column_type
         self.table = table
         self.primary_key = primary_key
+        self.converter = converter
 
     def __repr__(self):
         return 'Column(column_index={}, name="{}", column_type={}, primary_key={})'.format(
@@ -102,31 +159,8 @@ class Column(object):
         )
 
     def convert_value(self, value):
-        try:
-            if self.column_type == COLUMN_TYPES.INTEGER:
-                if value == '':
-                    return None
-                else:
-                    try:
-                        value = value.replace(',', '')
-                    except AttributeError:
-                        pass
+        return self.converter(self, value)
 
-                    return int(value)
-            elif self.column_type == COLUMN_TYPES.FLOAT:
-                if value == '':
-                    return None
-                else:
-                    return float(value)
-            elif self.column_type == COLUMN_TYPES.STRING:
-                return str(value)
-        except ValueError:
-            print('"{}"'.format(value))
-            print(value == "")
-            raise
-
-        return value
-        
 
 class Table(object):
     """Data table representation"""
@@ -185,7 +219,119 @@ class BaseSchema(object):
         return self._tables
 
 
-class AssessmentSchema2015(BaseSchema):
+class ColumnNaming2015Mixin(object):
+    DESCRIPTION_FILTERS = [
+        replace_percent_sign,
+        replace_number_symbol,
+        abbreviate_percent,
+        remove_and,
+        remove_for,
+        remove_yet,
+        remove_composite,
+        fix_particially,
+        fix_averge,
+        shorten_expectations,
+        shorten_subregion,
+        shorten_average,
+        shorten_physical_education,
+        remove_students,
+    ]
+
+    SUBGROUP_SPECIFIER_FILTERS = [
+        shorten_native_hawaiian,
+        number_word_to_numeral,
+    ]
+
+
+class ReportCardSchema2015(ColumnNaming2015Mixin, BaseSchema):
+    name = 'report_card_2015'
+
+    def from_file(self, f):
+        # Create the table definition
+        table = Table(self.name)
+        self._tables.append(table)
+
+        # For every row in the file ...
+        workbook = xlrd.open_workbook(file_contents=f.read())
+        sheet = workbook.sheet_by_index(0)
+
+        for i in range(sheet.nrows):
+            row = sheet.row(i)
+
+            # The first column is not a number, that means it's a heading
+            # or a subheading. Ignore it.
+            if row[0].ctype != XL_CELL_NUMBER:
+                continue
+
+            # Make the column name
+            column_name = self.get_column_name(row)
+
+            # Define the column type
+            column_type = get_column_type(row[6].value)
+
+            # Determine which columns should be used to create an index
+            if row[5].value.strip().startswith("SCHOOL ID"):
+                primary_key = True
+            else:
+                primary_key = False
+
+            # Add the column to a table definition
+            columndef = Column(column_index=int(row[0].value) - 1, name=column_name,
+                column_type=column_type, primary_key=primary_key)
+            table.add_column(columndef)
+
+    @classmethod
+    def get_column_name(cls, row):
+        # Grab cells needed to make the column name
+        subgroup_specifier = str(row[2].value)
+        description = row[5].value.strip()
+        test = row[1].value
+
+        # Some of the base metadata fields have example values in the
+        # description.  We'll just strip those out explicitly.
+        # For example:
+        # "SCHOOL TYPE CODE (0,1,2,C)" -> school_type_code
+
+        if description.startswith("SCHOOL ID"):
+            return 'school_id'
+
+        if description.startswith("SCHOOL TYPE CODE"):
+            return 'school_type_code'
+
+        if description.startswith("DISTRICT TYPE CODE"):
+            return 'district_type_code'
+
+        if description.startswith("DISTRICT SIZE CODE"):
+            return 'district_size_code'
+
+        # Replace/clean individual components of the column name for brevity
+        description = apply_filters(description, cls.DESCRIPTION_FILTERS)
+        try:
+            subgroup_specifier = apply_filters(subgroup_specifier,
+                cls.SUBGROUP_SPECIFIER_FILTERS)
+        except AttributeError:
+            print(subgroup_specifier)
+            raise
+
+        bits = [valid_column_name(description)]
+        if test != "":
+            bits.append(valid_column_name(test))
+
+        if subgroup_specifier != "":
+            bits.append(valid_column_name(subgroup_specifier))
+
+        return "_".join(bits)
+
+
+def get_report_card_schema(year):
+    """Get a schema class for a particular year's data"""
+    if year == 2015:
+        return ReportCardSchema2015()
+
+    raise ValueError("No schema found for {}".format(year))
+
+
+class AssessmentSchema2015(ColumnNaming2015Mixin, BaseSchema):
     """Column and table definitions for the 2015 report card assessment data"""
 
     # Schema name.  This will also be used to prefix tables when created
@@ -194,12 +340,12 @@ class AssessmentSchema2015(BaseSchema):
     # might be possible in the future once we see a few years worth of data
     name = 'assessment_2015'
 
-    # Headings and subheadings in the record layout file. 
+    # Headings and subheadings in the record layout file.
 
     # These will be used to break columns into separate tables in a way that
     # reflects the way the data is organized instead of along arbitrary numeric
     # breaks.
-    
+
     # HACK: Hardcoded values.  There doesn't seem to be
     # any better way to detect these based on the file alone
     HEADINGS = set([
@@ -231,7 +377,7 @@ class AssessmentSchema2015(BaseSchema):
         "STATE",
     ])
 
-    # Table name to hold basic metadata about schools (RCDTS id, name, etc) 
+    # Table name to hold basic metadata about schools (RCDTS id, name, etc)
     SCHOOLS_TABLE_NAME = "schools"
 
     # Map between headings and table names
@@ -239,7 +385,7 @@ class AssessmentSchema2015(BaseSchema):
     # These will be used to determine which table to assign columns to as we
     # iterate through the column definitions in the record layout spreadsheet
     SECTION_TO_TABLE = {
-        (None, None): SCHOOLS_TABLE_NAME, 
+        (None, None): SCHOOLS_TABLE_NAME,
         ("ILLINOIS STATE ASSESSMENT INFORMATION",
          "TOTAL ENROLLMENT AND PERCENT NOT TESTED IN ENGLISH LANGUAGE ARTS/LITERACY (ELA)"): "participation",
         ("ILLINOIS STATE ASSESSMENT INFORMATION",
@@ -281,19 +427,20 @@ class AssessmentSchema2015(BaseSchema):
     # use something explicit and clear.
     SCHOOL_ID_COLUMN_NAME = "school_id"
 
+
     @classmethod
-    def get_column_name(cls, row):    
+    def get_column_name(cls, row):
         """
         Get a valid database column name
-        
+
         Get a valid database column name based on a row in the record layout
-        spreadsheet. It rougly reflects the column description in the 
+        spreadsheet. It rougly reflects the column description in the
         record layout.
-        
+
         """
         # TODO: Should we include the column number from the record layout as
         # part of the column name?  It would make the names uglier, but maybe
-        # easier to differentiate between columns and build queries when 
+        # easier to differentiate between columns and build queries when
         # looking at the record layout.
 
         # We'll build the column name based on three pieces of information in
@@ -303,13 +450,13 @@ class AssessmentSchema2015(BaseSchema):
         description = row[5].value
         # This will be something like "LOW INCOME". It usaully reflects a
         # demographic
-        modifier = row[2].value
+        subgroup_specifier = row[2].value
         # This will be something like "PARCC"
         test = row[1].value
 
         # Always use our canonical column name for the primary key
         if description.startswith("SCHOOL ID"):
-            return cls.SCHOOL_ID_COLUMN_NAME 
+            return cls.SCHOOL_ID_COLUMN_NAME
 
         # Use a clear, simple name for the school type code as well
         if description.startswith("SCHOOL TYPE CODE"):
@@ -318,36 +465,19 @@ class AssessmentSchema2015(BaseSchema):
         # Much of the rest of this code is to try to shorten the value
         # because just slugifying/concatinating the bits creates column
         # names that exceed the maximum length allowed by PostgreSQL
+        description = apply_filters(description, cls.DESCRIPTION_FILTERS)
 
-        # Replace some characters in the various components of the column
-        # name to make them shorter or using alphanumeric characters
-        description = re.sub(r'^%( OF){0,1}', 'PCT', description)
-        description = description.replace('PERCENTAGE OF', 'PCT')
-        description = description.replace('AND', '')
-        description = description.replace('and', '')
-        description = description.replace('FOR', '')
-        description = description.replace('PERCENT OF', 'PCT')
-        description = description.replace('YET', '')
-        # Composite also shows up in modifier, so we can get rid of it
-        # in description
-        description = description.replace('COMPOSITE', '')
-        description = description.replace('PARTICIALLY', 'PARTIALLY')
-        description = description.replace('EXPECTATIONS', 'EXPECTNS')
-        description = description.replace('SUBREGION', 'SUBRGN')
-        description = description.replace('STUDENTS', "")
-
-        modifier = modifier.replace('NATIVE HAWAIIAN AND OTHERS',
-            'HAWAIIAN')
-        modifier = modifier.replace('TWO', '2')
+        # Replace some characters in the various components of the subgroup_specifier column
+        subgroup_specifier = apply_filters(subgroup_specifier, cls.SUBGROUP_SPECIFIER_FILTERS)
 
         # This particular case, e.g.
         # "# of LEP students who have attended schools in the U.S. for less than 12 months and are not assessed on the State's ELA test (SCHOOL)"
-        # makes super long column names. 
+        # makes super long column names.
         pattern = (r'# of.*\(([A-Z]+)\)')
-        m = re.match(pattern, description)
+        m = re.match(pattern, row[5].value)
         if m is not None:
             column_name = 'lep_1st_year_in_us_' + m.group(1).lower()
-        else:    
+        else:
             # In general, we can just slugify the bits and concatenate them
             # together
             bits = [valid_column_name(description)]
@@ -355,10 +485,10 @@ class AssessmentSchema2015(BaseSchema):
             if test.strip():
                 bits.append(slugify(test))
 
-            if modifier.strip():
-                bits.append(slugify(modifier))
+            if subgroup_specifier.strip():
+                bits.append(slugify(subgroup_specifier))
 
-            column_name = '_'.join(bits)    
+            column_name = '_'.join(bits)
 
         assert len(column_name) <= 64, "'{}' is too long at {} characters".format(
                 column_name, len(column_name))
@@ -369,7 +499,7 @@ class AssessmentSchema2015(BaseSchema):
     def from_file(self, f):
         """
         Load schema from a file-like object
-        
+
         Args:
 
             f: File-like object containing a Microsoft Excel spreadsheet
@@ -379,8 +509,8 @@ class AssessmentSchema2015(BaseSchema):
         # Layout:
         #
         # 0: field number
-        # 1: test name (e.g. ALL TESTS, PARCC, DLM) 
-        # 2: modifier (e.g. ALL, MALE, FEMALE, WHITE)
+        # 1: test name (e.g. ALL TESTS, PARCC, DLM)
+        # 2: subgroup_specifier (e.g. ALL, MALE, FEMALE, WHITE)
         # 3: character range (e.g. 120-125)
         # 4: width
         # 5: description
@@ -412,11 +542,11 @@ class AssessmentSchema2015(BaseSchema):
                 if cell_value in self.HEADINGS:
                     # It's a top-level heading.  Save it, and clear out the
                     # previous subheading
-                    heading = cell_value 
+                    heading = cell_value
                     subheading = None
 
                 if cell_value in self.SUBHEADINGS:
-                    subheading = cell_value 
+                    subheading = cell_value
 
                 try:
                     # Look up the table name for the given heading,
@@ -425,7 +555,7 @@ class AssessmentSchema2015(BaseSchema):
                     # Add the current table to the schema's list of tables
                     self._tables.append(table)
                     # And construct a new table
-                    table = Table(self.name + '_' + table_name) 
+                    table = Table(self.name + '_' + table_name)
 
                     if table_name != self.SCHOOLS_TABLE_NAME:
                         table.add_column(copy(school_id_column))
@@ -434,13 +564,13 @@ class AssessmentSchema2015(BaseSchema):
                     # Items under this subheading are just part of the current
                     # table
                     pass
-                
+
                 # This is just a heading, so there's no further processing
                 # of a column definition needed.  Keep going.
                 continue
-          
+
             column_name = self.get_column_name(row)
-               
+
             col = Column(
                column_index=column_index,
                name=column_name,
@@ -453,7 +583,7 @@ class AssessmentSchema2015(BaseSchema):
             self._columns.append(col)
 
             # TODO: Should we build a lookup table of columns based on column
-            # descriptions or indices in the record layout? 
+            # descriptions or indices in the record layout?
 
             if column_name == self.SCHOOL_ID_COLUMN_NAME:
                 school_id_column = col
@@ -492,7 +622,7 @@ class PARCCParticipationSchema2015(BaseSchema):
 
         self._columns = [
             Column(column_index=0, name="rcdts",
-                column_type=COLUMN_TYPES.STRING, primary_key=True),        
+                column_type=COLUMN_TYPES.STRING, primary_key=True),
             Column(column_index=1, name="county",
                 column_type=COLUMN_TYPES.STRING),
             Column(column_index=2, name="district_number",

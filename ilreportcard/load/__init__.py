@@ -26,7 +26,7 @@ class BaseLoader(object):
             for c in tabledef.columns)
 
 
-class AssessmentLoader2015(BaseLoader):
+class DelimitedLoader2015(BaseLoader):
     def load(self, f, metadata, connection, flush=False):
         table_data = {t.name: [] for t in self._schema.tables}
 
@@ -38,10 +38,10 @@ class AssessmentLoader2015(BaseLoader):
         for row in reader:
             num_rows += 1
             for tabledef in self._schema.tables:
-                insert_row = self.get_row_values(tabledef, row) 
+                insert_row = self.get_row_values(tabledef, row)
                 table_data[tabledef.name].append(insert_row)
 
-        logging.info("Parsed {} rows".format(num_rows))        
+        logging.info("Parsed {} rows".format(num_rows))
 
         for tabledef in self._schema.tables:
             table = tabledef.as_sqlalchemy(metadata)
@@ -60,7 +60,14 @@ class AssessmentLoader2015(BaseLoader):
 
 def get_assessment_loader(year):
     if year == 2015:
-        return AssessmentLoader2015()
+        return DelimitedLoader2015()
+
+    raise ValueError("No loader found for {}".format(year))
+
+
+def get_report_card_loader(year):
+    if year == 2015:
+        return DelimitedLoader2015()
 
     raise ValueError("No loader found for {}".format(year))
 
@@ -83,7 +90,7 @@ class PARCCParticipationLoader2015(BaseLoader):
         else:
             column_index = columndef.column_index
 
-        return column_index    
+        return column_index
 
     @classmethod
     def get_row_values(cls, tabledef, row):
@@ -92,9 +99,9 @@ class PARCCParticipationLoader2015(BaseLoader):
         for columndef in tabledef.columns:
             column_index = cls.get_column_index(columndef)
 
-            updated_row.append(cls.get_column_value(columndef, row[column_index]))    
+            updated_row.append(cls.get_column_value(columndef, row[column_index]))
 
-        return tuple(updated_row)    
+        return tuple(updated_row)
 
     @classmethod
     def get_column_value(cls, column, val):
@@ -121,7 +128,7 @@ class PARCCParticipationLoader2015(BaseLoader):
                 return False
             except IndexError:
                 return False
-            
+
         return column.convert_value(stripped)
 
     def load(self, f, metadata, connection, flush=False):
