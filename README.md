@@ -59,7 +59,7 @@ Installation
 ------------
 
     mkvirtualenv python-illinois-school-report-card
-    git clone git@tribune.unfuddle.com:tribune/python-illinois-school-report-card.git
+    git clone https://github.com/newsapps/python-illinois-school-report-card.git
     cd python-illinois-school-report-card
     pip install -e --process-dependency-links .
 
