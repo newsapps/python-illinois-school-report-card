@@ -72,12 +72,6 @@ Prior years' data is available at ftp://ftp.isbe.net/SchoolReportCard/
 
 Prior to the public release, the data was available on an embargoed bases to news organizations via an SFTP server.
 
-### Included data
-
-A few files are included in the data directory as they were emailed to reporters and not published as part of the report card data dump.  Including them in this repo avoids the files getting lost on our hard drives or in our inboxes.
-
-* PARCCParticipation2015.xlsx - 2015 PARCC participation numbers.  The participation numbers in the report card dump includes both PARCC and DLM.
-
 Data loading
 ------------
 
@@ -99,7 +93,7 @@ Create the database table for the PARCC participation data:
 
 Load PARCC participation data:
 
-    invoke --root=./ilreportcard/ load_parcc_participation_data --year=2015 --data=./data/PARCCParticipation2015.xlsx --flush --database='postgresql://localhost:5432/school_report_card'
+    invoke --root=./ilreportcard/ load_parcc_participation_data --year=2015 --data=./data/2015_PARCC_participation.xlsx --flush --database='postgresql://localhost:5432/school_report_card'
 
 Create the database table for the report card data:
 
