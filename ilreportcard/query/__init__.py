@@ -76,7 +76,7 @@ def summary_query_2015(conn, rcdts_ids=None):
 
 
 def best_worst_performers_query(conn, year, subject, order, limit=50, counties=None):
-    f = globals()['summary_query_{}'.format(year)]
+    f = globals()['best_worst_performers_query_{}'.format(year)]
     return f(conn, subject, order, limit, counties)
 
 
