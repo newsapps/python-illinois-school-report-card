@@ -87,11 +87,11 @@ Create a database:
 
 Create database tables for assessment data:
 
-    invoke --root ./ilreportcard/ create_assessment_schema --layout=./data/2015\ School\ Report\ Card/RC15_assessment_layout.xlsx --year=2015 --database='postgresql://localhost:5432/school_report_card'
+    invoke create_assessment_schema --layout=./data/2015\ School\ Report\ Card/RC15_assessment_layout.xlsx --year=2015 --database='postgresql://localhost:5432/school_report_card'
 
 Load assessment data:
 
-    invoke --root ./ilreportcard/ load_assessment_data --year=2015 --layout=./data/2015\ School\ Report\ Card/RC15_assessment_layout.xlsx --data=./data/2015\ School\ Report\ Card/rc15_assessment.txt --flush --database='postgresql://localhost:5432/school_report_card'
+    invoke load_assessment_data --year=2015 --layout=./data/2015\ School\ Report\ Card/RC15_assessment_layout.xlsx --data=./data/2015\ School\ Report\ Card/rc15_assessment.txt --flush --database='postgresql://localhost:5432/school_report_card'
 
 Create the database table for the PARCC participation data:
 
@@ -103,11 +103,11 @@ Load PARCC participation data:
 
 Create the database table for the report card data:
 
-    invoke --root ./ilreportcard/ create_report_card_schema --layout=./data/2015\ School\ Report\ Card/RC15_layout.xlsx --year=2015 --database='postgresql://localhost:5432/school_report_card'
+    invoke create_report_card_schema --layout=./data/2015\ School\ Report\ Card/RC15_layout.xlsx --year=2015 --database='postgresql://localhost:5432/school_report_card'
 
 Load the report card data:
 
-    invoke --root ./ilreportcard/ load_report_card_data --layout=./data/2015\ School\ Report\ Card/RC15_layout.xlsx --data=./data/2015\ School\ Report\ Card/rc15.txt --year=2015 --flus --database='postgresql://localhost:5432/school_report_card'h
+    invoke load_report_card_data --layout=./data/2015\ School\ Report\ Card/RC15_layout.xlsx --data=./data/2015\ School\ Report\ Card/rc15.txt --year=2015 --flus --database='postgresql://localhost:5432/school_report_card'h
     
 Updating for a new year's data
 ------------------------------
