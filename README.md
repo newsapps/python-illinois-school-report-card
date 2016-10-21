@@ -101,7 +101,7 @@ Create the database table for the report card data:
 
 Load the report card data:
 
-    invoke load_report_card_data --layout=./data/2015\ School\ Report\ Card/RC15_layout.xlsx --data=./data/2015\ School\ Report\ Card/rc15.txt --year=2015 --flus --database='postgresql://localhost:5432/school_report_card'h
+    invoke load_report_card_data --layout=./data/2015\ School\ Report\ Card/RC15_layout.xlsx --data=./data/2015\ School\ Report\ Card/rc15.txt --year=2015 --flush --database='postgresql://localhost:5432/school_report_card'
     
 Updating for a new year's data
 ------------------------------

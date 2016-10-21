@@ -14,8 +14,10 @@ from .column_names import (
     replace_number_symbol,
     replace_percent_sign,
     abbreviate_percent,
+    abbreviate_credit,
     remove_and,
     remove_for,
+    remove_of,
     remove_yet,
     remove_composite,
     fix_averge,
@@ -244,9 +246,7 @@ class ColumnNamingMixin(object):
     ]
 
 
-class ReportCardSchema2015(ColumnNamingMixin, BaseSchema):
-    name = 'report_card_2015'
-
+class ReportCardSchema(ColumnNamingMixin, BaseSchema):
     def from_file(self, f):
         # Create the table definition
         table = Table(self.name)
@@ -324,10 +324,26 @@ class ReportCardSchema2015(ColumnNamingMixin, BaseSchema):
         return "_".join(bits)
 
 
+class ReportCardSchema2015(ReportCardSchema):
+    name = 'report_card_2015'
+
+
+class ReportCardSchema2016(ReportCardSchema):
+    DESCRIPTION_FILTERS = ReportCardSchema.DESCRIPTION_FILTERS + [
+        remove_of,
+        number_word_to_numeral,
+        abbreviate_credit,
+    ]
+
+    name = 'report_card_2016'
+
+
 def get_report_card_schema(year):
     """Get a schema class for a particular year's data"""
     if year == 2015:
         return ReportCardSchema2015()
+    elif year == 2016:
+        return ReportCardSchema2016()
 
     raise ValueError("No schema found for {}".format(year))
 

@@ -65,8 +65,6 @@ def get_assessment_loader(year):
 def get_report_card_loader(year):
     return DelimitedLoader()
 
-    raise ValueError("No loader found for {}".format(year))
-
 
 class PARCCParticipationLoader2015(BaseLoader):
     def set_schema(self, schema):

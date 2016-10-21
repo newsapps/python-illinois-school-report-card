@@ -18,11 +18,17 @@ def replace_number_symbol(s):
 def abbreviate_percent(s):
     return re.sub(r'PERCENT(AGE){0,1}', 'PCT', s, flags=re.I)
 
+def abbreviate_credit(s):
+    return re.sub(r'CREDIT', 'CDT', s, flags=re.I)
+
 def remove_and(s):
     return re.sub(r'\s+AND\s+', ' ', s, flags=re.I)
 
 def remove_for(s):
     return re.sub(r'\s+FOR\s+', ' ', s, flags=re.I)
+
+def remove_of(s):
+    return re.sub(r'\s+OF\s+', ' ', s, flags=re.I)
 
 def remove_yet(s):
     return re.sub(r'\s+YET\s+', ' ', s, flags=re.I)
