@@ -31,7 +31,7 @@ def remove_composite(s):
     return re.sub(r'\s+COMPOSITE\s+', ' ', s, flags=re.I)
 
 def remove_students(s):
-    return re.sub(r'\s+STUDENTS\s+', ' ', s, flags=re.I)
+    return re.sub(r'\s+STUDENTS\s*', ' ', s, flags=re.I)
 
 def fix_particially(s):
     return s.replace('PARTICIALLY', 'PARTIALLY')
@@ -78,7 +78,7 @@ def number_word_to_numeral(s):
     def replace_number_word(m):
         return " " + number_words[m.group(1)] + " "
 
-    pattern = r'\s+({})\s+'.format("|".join(number_words.keys()))
+    pattern = r'\s*({})\s+'.format("|".join(number_words.keys()))
     return re.sub(pattern, replace_number_word, s)
 
 def apply_filters(s, filters=[]):

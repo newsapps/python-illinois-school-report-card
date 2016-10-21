@@ -26,7 +26,7 @@ class BaseLoader(object):
             for c in tabledef.columns)
 
 
-class DelimitedLoader2015(BaseLoader):
+class DelimitedLoader(BaseLoader):
     def load(self, f, metadata, connection, flush=False):
         table_data = {t.name: [] for t in self._schema.tables}
 
@@ -59,15 +59,11 @@ class DelimitedLoader2015(BaseLoader):
 
 
 def get_assessment_loader(year):
-    if year == 2015:
-        return DelimitedLoader2015()
-
-    raise ValueError("No loader found for {}".format(year))
+    return DelimitedLoader()
 
 
 def get_report_card_loader(year):
-    if year == 2015:
-        return DelimitedLoader2015()
+    return DelimitedLoader()
 
     raise ValueError("No loader found for {}".format(year))
 

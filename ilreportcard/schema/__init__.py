@@ -2,6 +2,7 @@
 from copy import copy
 from enum import Enum
 import re
+import sys
 
 from sqlalchemy import (Column as SQAColumn, Table as SQATable, String, Integer,
     Float, Boolean)
@@ -219,7 +220,7 @@ class BaseSchema(object):
         return self._tables
 
 
-class ColumnNaming2015Mixin(object):
+class ColumnNamingMixin(object):
     DESCRIPTION_FILTERS = [
         replace_percent_sign,
         replace_number_symbol,
@@ -243,7 +244,7 @@ class ColumnNaming2015Mixin(object):
     ]
 
 
-class ReportCardSchema2015(ColumnNaming2015Mixin, BaseSchema):
+class ReportCardSchema2015(ColumnNamingMixin, BaseSchema):
     name = 'report_card_2015'
 
     def from_file(self, f):
@@ -330,15 +331,14 @@ def get_report_card_schema(year):
 
     raise ValueError("No schema found for {}".format(year))
 
+class AssessmentSchema(BaseSchema):
+    # Table name to hold basic metadata about schools (RCDTS id, name, etc)
+    SCHOOLS_TABLE_NAME = "schools"
 
-class AssessmentSchema2015(ColumnNaming2015Mixin, BaseSchema):
-    """Column and table definitions for the 2015 report card assessment data"""
-
-    # Schema name.  This will also be used to prefix tables when created
-    # in the database.  We decided to create separate tables for each year
-    # rather than trying to normalize the data into one table, though that
-    # might be possible in the future once we see a few years worth of data
-    name = 'assessment_2015'
+    # The school RCDTS id is the primary key in the dataset.  Instead of using
+    # the auto-generated name based on the description in the record layout,
+    # use something explicit and clear.
+    SCHOOL_ID_COLUMN_NAME = "school_id"
 
     # Headings and subheadings in the record layout file.
 
@@ -377,8 +377,6 @@ class AssessmentSchema2015(ColumnNaming2015Mixin, BaseSchema):
         "STATE",
     ])
 
-    # Table name to hold basic metadata about schools (RCDTS id, name, etc)
-    SCHOOLS_TABLE_NAME = "schools"
 
     # Map between headings and table names
     #
@@ -421,12 +419,6 @@ class AssessmentSchema2015(ColumnNaming2015Mixin, BaseSchema):
         ("DYNAMIC LEARNING MAPS ALTERNATE ASSESSMENT (DLM)", "GRADE 11"): "dlm_high_school",
         ("ACCOUNTABILITY", "SCHOOL"): "accountability"
     }
-
-    # The school RCDTS id is the primary key in the dataset.  Instead of using
-    # the auto-generated name based on the description in the record layout,
-    # use something explicit and clear.
-    SCHOOL_ID_COLUMN_NAME = "school_id"
-
 
     @classmethod
     def get_column_name(cls, row):
@@ -495,6 +487,8 @@ class AssessmentSchema2015(ColumnNaming2015Mixin, BaseSchema):
 
         return column_name
 
+    def get_sheet(self, workbook):
+        return workbook.sheet_by_index(0)
 
     def from_file(self, f):
         """
@@ -521,7 +515,7 @@ class AssessmentSchema2015(ColumnNaming2015Mixin, BaseSchema):
         # Some rows act as headings, which can be identified when the first
         # column is not a number
         workbook = xlrd.open_workbook(file_contents=f.read())
-        sheet = workbook.sheet_by_index(0)
+        sheet = self.get_sheet(workbook)
 
         column_index = 0
         table = None
@@ -569,7 +563,13 @@ class AssessmentSchema2015(ColumnNaming2015Mixin, BaseSchema):
                 # of a column definition needed.  Keep going.
                 continue
 
-            column_name = self.get_column_name(row)
+            try:
+                column_name = self.get_column_name(row)
+            except Exception:
+                # TODO: Use logging instead of print
+                sys.stderr.write("Error getting column names for row number {0}.\n".format(i))
+                sys.stderr.write(str(row) + "\n")
+                raise
 
             col = Column(
                column_index=column_index,
@@ -595,10 +595,30 @@ class AssessmentSchema2015(ColumnNaming2015Mixin, BaseSchema):
         self._tables.append(table)
 
 
+class AssessmentSchema2015(ColumnNamingMixin, AssessmentSchema):
+    """Column and table definitions for the 2015 report card assessment data"""
+
+    # Schema name.  This will also be used to prefix tables when created
+    # in the database.  We decided to create separate tables for each year
+    # rather than trying to normalize the data into one table, though that
+    # might be possible in the future once we see a few years worth of data
+    name = 'assessment_2015'
+
+
+class AssessmentSchema2016(ColumnNamingMixin, AssessmentSchema):
+    name = 'assessment_2016'
+
+    def get_sheet(self, workbook):
+        # In 2016, there are two worksheets: RC16 and Assessment
+        return workbook.sheet_by_index(1)
+
+
 def get_assessment_schema(year):
     """Get a schema class for a particular year's data"""
     if year == 2015:
         return AssessmentSchema2015()
+    elif year == 2016:
+        return AssessmentSchema2016()
 
     raise ValueError("No schema found for {}".format(year))
 
